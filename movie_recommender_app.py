@@ -14,6 +14,8 @@ def get_loaded():
     return load_data()
 
 data, ratings, movies = get_loaded()
+genre_columns = [col for col in movies.columns if col.startswith('genre_')]
+
 unique_users = sorted(data['user_id'].unique())
 
 
@@ -27,7 +29,8 @@ year_range = st.sidebar.slider("Filter by Release Year", year_min, year_max, (ye
 
 
 genres = [col.replace('genre_', '') for col in movies.columns if col.startswith('genre_')]
-selected_genres = st.sidebar.multiselect("Filter by Genre (UI only, non-functional yet):", genres)
+selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
+
 
 
 if st.sidebar.button(" Recommend Movies"):
@@ -37,9 +40,13 @@ if st.sidebar.button(" Recommend Movies"):
         top_n = get_top_n(predictions, n=10)
         recommended_df = recommend_movies_for_user(user_id, top_n, movies)
 
-        
+        recommended_df['release_year'] = recommended_df['movie_title'].str.extract(r'\((\d{4})\)').fillna('0').astype(int)
         filtered_df = recommended_df[(recommended_df['release_year'] >= year_range[0]) & 
                                      (recommended_df['release_year'] <= year_range[1])]
+        if selected_genres:
+              for genre in selected_genres:
+                  filtered_df = filtered_df[filtered_df[genre] == 1]
+
 
         st.success(f"Here are your movie recommendations, User {user_id} 🎉")
         for title in filtered_df['movie_title'].values:
