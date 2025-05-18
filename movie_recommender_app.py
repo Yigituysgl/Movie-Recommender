@@ -23,8 +23,8 @@ genre_labels = [
 ]
 
 movies = pd.read_csv(item_path, sep='|', encoding='latin-1', header=None,
-    usecols=[1, 2] + list(range(5, 24)),
-    names=["movie_title", "release_date"] + [f"genre_{g}" for g in genre_labels]
+    usecols=[0, 1, 2] + list(range(5, 24)),
+    names=["item_id","movie_title", "release_date"] + [f"genre_{g}" for g in genre_labels]
 )
 
 
