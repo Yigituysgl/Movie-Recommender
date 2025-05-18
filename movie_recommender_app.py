@@ -31,7 +31,23 @@ year_min, year_max = int(movies['release_year'].min()), int(movies['release_year
 year_range = st.sidebar.slider("Filter by Release Year", year_min, year_max, (year_min, year_max))
 
 
-genre_columns = [col for col in movies.columns if col.startswith('genre_')]
+
+genre_path = 'ml-100k/u.genre'
+genre_dict = {}
+with open(genre_path, 'r') as f:
+    for line in f:
+        name, idx = line.strip().split('|')
+        genre_dict[int(idx)] = name
+
+
+item_path = 'ml-100k/u.item'
+
+genre_columns = [f"genre_{genre_dict[i]}" for i in range(len(genre_dict)) if i in genre_dict]
+movies = pd.read_csv(item_path, sep='|', encoding='latin-1', header=None,
+                     usecols=[1] + list(range(5, 5 + len(genre_dict))),
+                     names=['movie_title'] + genre_columns)
+
+
 selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
 
 
