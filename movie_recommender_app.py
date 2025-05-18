@@ -43,6 +43,8 @@ if st.sidebar.button(" Recommend Movies"):
         predictions = get_predictions(model, testset)
         top_n = get_top_n(predictions, n=10)
         recommended_df = recommend_movies_for_user(user_id, top_n, movies)
+        recommended_df = pd.merge(recommended_df, movies, on='movie_title', how='left')
+
 
         recommended_df['release_year'] = recommended_df['movie_title'].str.extract(r'\((\d{4})\)').fillna('0').astype(int)
         filtered_df = recommended_df[(recommended_df['release_year'] >= year_range[0]) & 
