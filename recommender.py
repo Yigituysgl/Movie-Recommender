@@ -5,11 +5,24 @@ from surprise import Dataset, Reader, SVD, accuracy
 from surprise.model_selection import train_test_split
 
 def load_data():
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
     ratings_cols = ['user_id', 'item_id', 'rating', 'timestamp']
-    ratings = pd.read_csv("u.data", sep='\t', names=ratings_cols, encoding='latin-1')
+    ratings = pd.read_csv(
+        os.path.join(base_path, "u.data"),
+        sep='\t',
+        names=ratings_cols,
+        encoding='latin-1'
+    )
 
     item_cols = ['item_id', 'movie_title', 'release_date', 'video_release_date', 'IMDb_URL'] + [f'genre_{i}' for i in range(19)]
-    movies = pd.read_csv("u.item", sep='|', names=item_cols, usecols=[0, 1], encoding='latin-1')
+    movies = pd.read_csv(
+        os.path.join(base_path, "u.item"),
+        sep='|',
+        names=item_cols,
+        usecols=[0, 1],
+        encoding='latin-1'
+    )
 
     data = pd.merge(ratings, movies, on='item_id')
     return data, ratings, movies
