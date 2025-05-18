@@ -23,13 +23,17 @@ st.sidebar.title("🔧 Controls")
 user_id = st.sidebar.selectbox("Select User ID:", unique_users)
 
 
-movies['release_year'] = movies['movie_title'].str.extract(r'\((\d{4})\)').fillna('0').astype(int)
+movies['release_year'] = movies['movie_title'].str.extract(r'\((\d{4})\)').astype(float)
+movies = movies.dropna(subset=['release_year'])
+movies['release_year'] = movies['release_year'].astype(int)
+
 year_min, year_max = int(movies['release_year'].min()), int(movies['release_year'].max())
 year_range = st.sidebar.slider("Filter by Release Year", year_min, year_max, (year_min, year_max))
 
 
-genres = [col.replace('genre_', '') for col in movies.columns if col.startswith('genre_')]
+genre_columns = [col for col in movies.columns if col.startswith('genre_')]
 selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
+
 
 
 
