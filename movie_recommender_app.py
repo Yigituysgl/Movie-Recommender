@@ -19,7 +19,7 @@ genre_columns = [col for col in movies.columns if col.startswith('genre_')]
 unique_users = sorted(data['user_id'].unique())
 
 
-st.sidebar.title("🔧 Controls")
+st.sidebar.title(" Choose ")
 user_id = st.sidebar.selectbox("Select User ID:", unique_users)
 
 
@@ -37,26 +37,34 @@ selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
 
 
 
-if st.sidebar.button(" Recommend Movies"):
+if st.sidebar.button("🎬 Recommend Movies"):
     with st.spinner("Training model and fetching recommendations..."):
         model, testset = train_model(data)
         predictions = get_predictions(model, testset)
         top_n = get_top_n(predictions, n=10)
-        
-        recommended_df = pd.merge(recommended_df, movies, on='movie_title', how='left')
+        recommended_df = recommend_movies_for_user(user_id, top_n, movies)
 
+       
+        genre_cols = [col for col in movies.columns if col.startswith("genre_")]
+        recommended_df = pd.merge(recommended_df, movies[['movie_title', 'release_year'] + genre_cols], on='movie_title', how='left')
+
+       
         recommended_df = recommended_df.dropna(subset=['release_year'])
         recommended_df['release_year'] = recommended_df['release_year'].astype(int)
-        filtered_df = recommended_df[(recommended_df['release_year'] >= year_range[0]) & 
-                                     (recommended_df['release_year'] <= year_range[1])]
-        if selected_genres:
-              for genre in selected_genres:
-                  filtered_df = filtered_df[filtered_df[genre] == 1]
+        filtered_df = recommended_df[
+            (recommended_df['release_year'] >= year_range[0]) &
+            (recommended_df['release_year'] <= year_range[1])
+        ]
 
+       
+        if selected_genres:
+            for genre in selected_genres:
+                filtered_df = filtered_df[filtered_df[genre] == 1]
 
         st.success(f"Here are your movie recommendations, User {user_id} 🎉")
         for title in filtered_df['movie_title'].values:
             st.write(f"✅ {title}")
 else:
     st.info("Select options and click '🎥 Recommend Movies' to see results.")
+
 
