@@ -39,6 +39,7 @@ year_range = st.sidebar.slider("Filter by Release Year", year_min, year_max, (ye
 
 genre_columns = [f"genre_{g}" for g in genre_labels]
 selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
+user_id = st.sidebar.selectbox("Select User ID:", sorted(data['user_id'].unique()))
 
 
 if st.sidebar.button("🎬 Recommend Movies"):
