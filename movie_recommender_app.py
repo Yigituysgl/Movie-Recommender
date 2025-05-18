@@ -27,7 +27,7 @@ movies = pd.read_csv(item_path, sep='|', encoding='latin-1', header=None,
     names=["item_id","movie_title", "release_date"] + [f"genre_{g}" for g in genre_labels]
 )
 
-
+recommended_df = pd.merge(recommended_df, movies[['item_id', 'movie_title', 'release_date'] + genre_columns], on='movie_title', how='left')
 movies['release_year'] = pd.to_datetime(movies['release_date'], errors='coerce').dt.year
 movies = movies.dropna(subset=['release_year'])
 movies['release_year'] = movies['release_year'].astype(int)
