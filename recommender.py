@@ -2,8 +2,10 @@ import os
 import pandas as pd
 import numpy as np
 from collections import defaultdict
-from surprise import Dataset, Reader, SVD, accuracy
+from surprise import Dataset, Reader, SVD, NormalPredictor, BaselineOnly, accuracy
 from surprise.model_selection import train_test_split
+
+SEED = 42
 
 def load_data():
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -28,11 +30,11 @@ def load_data():
     data = pd.merge(ratings, movies, on='item_id')
     return data, ratings, movies
 
-def train_model(data):
+def train_model(data, algo=None):
     reader = Reader(rating_scale=(1, 5))
     data_surp = Dataset.load_from_df(data[['user_id', 'item_id', 'rating']], reader)
-    trainset, testset = train_test_split(data_surp, test_size=0.2)
-    model = SVD()
+    trainset, testset = train_test_split(data_surp, test_size=0.2, random_state=SEED)
+    model = algo if algo is not None else SVD(random_state=SEED)
     model.fit(trainset)
     return model, testset
 
@@ -40,7 +42,7 @@ def train_full_model(data):
     reader = Reader(rating_scale=(1, 5))
     data_surp = Dataset.load_from_df(data[['user_id', 'item_id', 'rating']], reader)
     trainset = data_surp.build_full_trainset()
-    model = SVD()
+    model = SVD(random_state=SEED)
     model.fit(trainset)
     return model, trainset
 
@@ -65,11 +67,30 @@ def get_top_n(predictions, n=5):
         top_n[uid] = user_ratings[:n]
     return top_n
 
-def evaluate(predictions, k=5, threshold=4.0):
+def get_metrics(predictions, k=5, threshold=4.0):
     precisions, recalls = precision_recall_at_k(predictions, k=k, threshold=threshold)
-    print(f"RMSE: {accuracy.rmse(predictions, verbose=False):.4f}")
-    print(f"Precision@{k}: {sum(precisions.values()) / len(precisions):.4f}")
-    print(f"Recall@{k}: {sum(recalls.values()) / len(recalls):.4f}")
+    rmse = accuracy.rmse(predictions, verbose=False)
+    return rmse, sum(precisions.values()) / len(precisions), sum(recalls.values()) / len(recalls)
+
+def evaluate(predictions, k=5, threshold=4.0):
+    rmse, precision, recall = get_metrics(predictions, k=k, threshold=threshold)
+    print(f"RMSE: {rmse:.4f}")
+    print(f"Precision@{k}: {precision:.4f}")
+    print(f"Recall@{k}: {recall:.4f}")
+
+def compare_algorithms(data, k=5, threshold=4.0):
+    # NormalPredictor has no random_state and draws from numpy's global RNG
+    np.random.seed(SEED)
+    algos = {
+        'NormalPredictor': NormalPredictor(),
+        'BaselineOnly': BaselineOnly(verbose=False),
+        'SVD': SVD(random_state=SEED),
+    }
+    results = {}
+    for name, algo in algos.items():
+        model, testset = train_model(data, algo)
+        results[name] = get_metrics(get_predictions(model, testset), k=k, threshold=threshold)
+    return results
 
 def precision_recall_at_k(predictions, k=5, threshold=4.0):
     user_est_true = defaultdict(list)
@@ -95,8 +116,9 @@ def recommend_movies_for_user(user_id, top_n, movies):
 
 if __name__ == '__main__':
     data, ratings, movies = load_data()
-    model, testset = train_model(data)
-    evaluate(get_predictions(model, testset))
+    print(f"{'Algorithm':<16} {'RMSE':>7} {'Precision@5':>12} {'Recall@5':>9}")
+    for name, (rmse, precision, recall) in compare_algorithms(data).items():
+        print(f"{name:<16} {rmse:>7.4f} {precision:>12.4f} {recall:>9.4f}")
 
     full_model, trainset = train_full_model(data)
     top_n = get_top_n(get_unrated_predictions(full_model, trainset, 1), n=5)

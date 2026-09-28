@@ -44,7 +44,7 @@ To produce recommendations (`train_full_model` and `get_unrated_predictions` in 
 
 ## Evaluation
 
-Evaluation is kept separate from recommendation and uses a random 80/20 split (`train_model` in `recommender.py`). The model is trained on 80% of the ratings and scored on the held-out 20%:
+Evaluation is kept separate from recommendation and uses a seeded random 80/20 split (`train_model` in `recommender.py`). The model is trained on 80% of the ratings and scored on the held-out 20%:
 
 - **RMSE**: the root mean squared error between predicted and actual ratings on the test set. Lower is better.
 - **Precision@5 / Recall@5**: a rating of 4 or higher counts as "relevant". For each user, the test-set movies are sorted by predicted rating. Among the top 5, a movie counts as "recommended" if its predicted rating is 4 or higher.
@@ -54,17 +54,26 @@ Evaluation is kept separate from recommendation and uses a random 80/20 split (`
 
 ### Results
 
-Output of `python recommender.py`. The split and SVD's starting values are random and no seed is set, so scores vary slightly between runs:
+Output of `python recommender.py`. SVD is compared with two simple Surprise baselines, trained and scored on the same split:
 
-| Run | RMSE | Precision@5 | Recall@5 |
-|-----|------|-------------|----------|
-| 1 | 0.9365 | 0.6457 | 0.2470 |
-| 2 | 0.9372 | 0.6359 | 0.2312 |
-| 3 | 0.9376 | 0.6362 | 0.2340 |
+- **NormalPredictor** predicts a random rating, drawn from a normal distribution fitted to the training ratings.
+- **BaselineOnly** predicts the global mean plus a user bias and a movie bias, with no latent factors.
 
-On the 1–5 scale, the typical prediction error is about 0.94 stars (RMSE, which weights large errors more heavily). Per user, on average about 64% of the top-5 movies predicted at 4 or higher were ones the user actually rated 4 or higher.
+| Algorithm | RMSE | Precision@5 | Recall@5 |
+|-----------|------|-------------|----------|
+| NormalPredictor | 1.5178 | 0.5499 | 0.2447 |
+| BaselineOnly | 0.9442 | 0.6022 | 0.2077 |
+| SVD | **0.9352** | **0.6348** | 0.2347 |
 
-These runs used Python 3.11.16, scikit-surprise 1.1.4, pandas 2.3.3, numpy 1.24.4 and streamlit 1.64.0.
+SVD has the lowest RMSE: its typical prediction error is about 0.94 stars on the 1–5 scale (RMSE weights large errors more heavily). Most of its improvement over random comes from the user and movie biases alone; the latent factors add a smaller gain on top of BaselineOnly. NormalPredictor's Recall@5 is higher than SVD's even though its predictions are random; see the note below for why.
+
+The results are reproducible: `SEED = 42` in `recommender.py` fixes the 80/20 split, SVD's starting values and NormalPredictor's random draws, so repeated runs print exactly the same numbers. They were produced with Python 3.11.16, scikit-surprise 1.1.4, pandas 2.3.3, numpy 1.24.4 and streamlit 1.64.0. A different seed or different library versions will give slightly different numbers.
+
+### Important: what Precision@5 and Recall@5 do and don't measure
+
+Precision@5 and Recall@5 are computed **only among the movies each user rated in the test set**, not across the whole catalog. For each user, the model only ranks the handful of movies that user is known to have rated. In this split, the median user has 13 test movies, compared with 1,682 movies in the catalog. Every one of those movies was one the user chose to watch, so the set is already skewed towards movies they like: 55.5% of test ratings are 4 or higher.
+
+As a result, these numbers **overstate how precise the recommendations would be across the full catalog**, which is what the app actually recommends from. The random NormalPredictor already scores 0.55 precision, about the share of test ratings that are 4 or higher. Its higher Recall@5 happens because its random, widely spread predictions put more movies above the 4.0 "recommended" threshold. Treat these metrics as a way to compare models on this split, not as the chance that a recommended movie will be liked. Measuring catalog-wide quality would need a different setup, for example ranking all unrated movies and checking where the held-out liked movies land.
 
 ## Setup on Windows (conda)
 
@@ -99,7 +108,7 @@ These runs used Python 3.11.16, scikit-surprise 1.1.4, pandas 2.3.3, numpy 1.24.
    python test_recommender.py
    ```
 
-7. **Print the evaluation metrics and sample recommendations for user 1:**
+7. **Print the comparison table (NormalPredictor, BaselineOnly, SVD) and sample recommendations for user 1:**
 
    ```bash
    python recommender.py
@@ -129,7 +138,7 @@ Without conda, `pip install -r requirement.txt` with Python 3.11 should also wor
 ## Limitations
 
 - Only existing MovieLens users (IDs 1–943) can get recommendations; there is no way to add your own ratings.
-- No random seed is set, so metrics and recommendations change slightly between runs and app restarts.
+- Precision@5 and Recall@5 are measured only on movies each user already rated, so they overstate catalog-wide precision (see the note under Evaluation).
 - Duplicate titles in the dataset can appear twice in a recommendation list.
 
 ## Acknowledgements

@@ -1,5 +1,6 @@
 from recommender import (load_data, train_model, train_full_model, get_predictions,
-                         get_unrated_predictions, get_top_n, recommend_movies_for_user)
+                         get_unrated_predictions, get_top_n, recommend_movies_for_user,
+                         compare_algorithms)
 
 def test_load_data():
     data, ratings, movies = load_data()
@@ -40,8 +41,25 @@ def test_unrated_recommendations():
     assert len(recommended) == 5, "Expected 5 recommendations for user 1"
     print("✅ unrated recommendations test passed")
 
+def test_reproducible():
+    data, _, _ = load_data()
+    model_a, testset_a = train_model(data)
+    model_b, testset_b = train_model(data)
+    assert testset_a == testset_b, "Test split differs between runs!"
+    assert get_predictions(model_a, testset_a) == get_predictions(model_b, testset_b), "Predictions differ between runs!"
+    print("✅ reproducibility test passed")
+
+def test_compare_algorithms():
+    data, _, _ = load_data()
+    results = compare_algorithms(data)
+    assert set(results) == {'NormalPredictor', 'BaselineOnly', 'SVD'}, "Missing algorithms!"
+    assert results['SVD'][0] < results['NormalPredictor'][0], "SVD RMSE not better than random!"
+    print("✅ compare_algorithms test passed")
+
 if __name__ == '__main__':
     test_load_data()
     test_model_training()
     test_predictions()
     test_unrated_recommendations()
+    test_reproducible()
+    test_compare_algorithms()
