@@ -74,7 +74,7 @@ def precision_recall_at_k(predictions, k=5, threshold=4.0):
 
 def recommend_movies_for_user(user_id, top_n, movies):
     recommended_ids = [iid for (iid, _) in top_n[user_id]]
-    return movies[movies['item_id'].isin(recommended_ids)][['movie_title']]
+    return movies[movies['item_id'].isin(recommended_ids)]
 
 
 if __name__ == '__main__':
