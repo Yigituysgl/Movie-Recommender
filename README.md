@@ -90,10 +90,10 @@ As a result, these numbers **overstate how precise the recommendations would be 
    cd Movie-Recommender
    ```
 
-4. **Create the environment.** Use Python 3.11: the pinned numpy 1.24 has no builds for Python 3.12. This downloads roughly 300 MB.
+4. **Create the environment** from `environment.yml`. It installs Python 3.11 and the packages from conda-forge; Python 3.11 is needed because the pinned numpy 1.24 has no builds for Python 3.12. This downloads roughly 300 MB.
 
    ```bash
-   conda create -n movierec python=3.11 numpy=1.24 pandas scikit-learn streamlit scikit-surprise -c conda-forge
+   conda env create -f environment.yml
    ```
 
 5. **Activate it:**
@@ -122,7 +122,7 @@ As a result, these numbers **overstate how precise the recommendations would be 
 
    It opens at http://localhost:8501. Choose a user ID in the sidebar, optionally set a year range and genres, and click **🎥 Recommend Movies**. The first click trains the model, which takes a few seconds; later clicks reuse it. Stop the app with `Ctrl+C`.
 
-Without conda, `pip install -r requirement.txt` with Python 3.11 should also work, but `scikit-surprise` will likely need Microsoft C++ Build Tools ("Desktop development with C++") to compile. This route hasn't been tested.
+Without conda, `pip install -r requirements.txt` with Python 3.11 should also work, but `scikit-surprise` will likely need Microsoft C++ Build Tools ("Desktop development with C++") to compile. This route hasn't been tested.
 
 ## Project files
 
@@ -132,8 +132,8 @@ Without conda, `pip install -r requirement.txt` with Python 3.11 should also wor
 | `movie_recommender_app.py` | Streamlit web app |
 | `test_recommender.py` | Tests (run with `python test_recommender.py`) |
 | `Personal_Recom_System.ipynb` | Notebook used during development |
-| `requirement.txt` | pip dependencies |
-| `svd_model.pkl` | Pickled file, probably a saved model; not loaded by any code |
+| `environment.yml` | conda environment (recommended setup) |
+| `requirements.txt` | pip dependencies |
 
 ## Limitations
 

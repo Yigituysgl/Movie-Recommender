@@ -1,0 +1,10 @@
+name: movierec
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy=1.24
+  - pandas
+  - scikit-learn
+  - streamlit
+  - scikit-surprise
