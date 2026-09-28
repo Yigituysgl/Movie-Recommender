@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from recommender import load_data, train_model, get_predictions, get_top_n, recommend_movies_for_user
+from recommender import load_data, train_full_model, get_unrated_predictions, get_top_n
 
 st.set_page_config(page_title="🎬 Movie Recommender", layout="wide")
 st.title("🎬 Personal Movie Recommender System")
@@ -9,6 +9,10 @@ st.markdown("Recommend movies based on your ratings using collaborative filterin
 @st.cache_data
 def get_loaded():
     return load_data()
+
+@st.cache_resource
+def get_full_model():
+    return train_full_model(get_loaded()[0])
 
 data, ratings, movies = get_loaded()
 
@@ -40,14 +44,13 @@ selected_genres = st.sidebar.multiselect("Filter by Genre:", genre_columns)
 
 if st.sidebar.button("🎥 Recommend Movies"):
     with st.spinner("Training model and fetching recommendations..."):
-        model, testset = train_model(data)
-        predictions = get_predictions(model, testset)
-        top_n = get_top_n(predictions, n=10)
-        recommended_df = recommend_movies_for_user(user_id, top_n, movies)
+        model, trainset = get_full_model()
+        predictions = get_unrated_predictions(model, trainset, user_id)
+        ranked = get_top_n(predictions, n=len(predictions))[user_id]
 
-        
-        recommended_df = recommended_df.dropna(subset=['release_year'])
-        recommended_df['release_year'] = recommended_df['release_year'].astype(int)
+        # merge keeps the ranked order of the left frame
+        ranked_df = pd.DataFrame(ranked, columns=['item_id', 'est'])
+        recommended_df = ranked_df.merge(movies, on='item_id')
         filtered_df = recommended_df[
             (recommended_df['release_year'] >= year_range[0]) &
             (recommended_df['release_year'] <= year_range[1])
@@ -58,10 +61,13 @@ if st.sidebar.button("🎥 Recommend Movies"):
             for genre in selected_genres:
                 filtered_df = filtered_df[filtered_df[genre] == 1]
 
-        
-        st.success(f"Here are your movie recommendations, User {user_id} 🎉")
-        for title in filtered_df['movie_title'].values:
-            st.write(f"✅ {title}")
+        filtered_df = filtered_df.head(10)
+        if filtered_df.empty:
+            st.warning("No unrated movies match these filters.")
+        else:
+            st.success(f"Here are your movie recommendations, User {user_id} 🎉")
+            for title in filtered_df['movie_title'].values:
+                st.write(f"✅ {title}")
 else:
     st.info("Select options and click '🎥 Recommend Movies' to see results.")
 

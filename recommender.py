@@ -36,8 +36,24 @@ def train_model(data):
     model.fit(trainset)
     return model, testset
 
+def train_full_model(data):
+    reader = Reader(rating_scale=(1, 5))
+    data_surp = Dataset.load_from_df(data[['user_id', 'item_id', 'rating']], reader)
+    trainset = data_surp.build_full_trainset()
+    model = SVD()
+    model.fit(trainset)
+    return model, trainset
+
 def get_predictions(model, testset):
     return model.test(testset)
+
+def get_unrated_predictions(model, trainset, user_id):
+    # Like trainset.build_anti_testset(), but only for one user
+    inner_uid = trainset.to_inner_uid(user_id)
+    rated = {inner_iid for (inner_iid, _) in trainset.ur[inner_uid]}
+    anti_testset = [(user_id, trainset.to_raw_iid(inner_iid), trainset.global_mean)
+                    for inner_iid in trainset.all_items() if inner_iid not in rated]
+    return model.test(anti_testset)
 
 
 def get_top_n(predictions, n=5):
@@ -80,8 +96,9 @@ def recommend_movies_for_user(user_id, top_n, movies):
 if __name__ == '__main__':
     data, ratings, movies = load_data()
     model, testset = train_model(data)
-    predictions = get_predictions(model, testset)
-    top_n = get_top_n(predictions, n=5)
-    evaluate(predictions)
+    evaluate(get_predictions(model, testset))
+
+    full_model, trainset = train_full_model(data)
+    top_n = get_top_n(get_unrated_predictions(full_model, trainset, 1), n=5)
     print("\nRecommended Movies for User 1:")
     print(recommend_movies_for_user(1, top_n, movies))

@@ -1,4 +1,5 @@
-from recommender import load_data, train_model, get_predictions, get_top_n, recommend_movies_for_user
+from recommender import (load_data, train_model, train_full_model, get_predictions,
+                         get_unrated_predictions, get_top_n, recommend_movies_for_user)
 
 def test_load_data():
     data, ratings, movies = load_data()
@@ -25,7 +26,22 @@ def test_predictions():
     assert not recommended.empty, "No recommendations for user 1"
     print("✅ predictions & recommend_movies test passed")
 
+def test_unrated_recommendations():
+    data, _, movies = load_data()
+    model, trainset = train_full_model(data)
+    predictions = get_unrated_predictions(model, trainset, 1)
+    rated = set(data[data['user_id'] == 1]['item_id'])
+    predicted = {iid for (_, iid, _, _, _) in predictions}
+    assert predicted, "No unrated predictions for user 1"
+    assert not predicted & rated, "Predicted movies user 1 already rated!"
+    assert predicted | rated == set(data['item_id']), "Some unrated movies were skipped!"
+    top_n = get_top_n(predictions, n=5)
+    recommended = recommend_movies_for_user(1, top_n, movies)
+    assert len(recommended) == 5, "Expected 5 recommendations for user 1"
+    print("✅ unrated recommendations test passed")
+
 if __name__ == '__main__':
     test_load_data()
     test_model_training()
     test_predictions()
+    test_unrated_recommendations()
